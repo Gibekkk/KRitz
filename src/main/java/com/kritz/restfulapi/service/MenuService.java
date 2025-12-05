@@ -6,14 +6,18 @@ import java.time.LocalDateTime;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
-
+import com.kritz.restfulapi.dto.EditPesananDTO;
 import com.kritz.restfulapi.dto.LangkahDTO;
 import com.kritz.restfulapi.dto.MenuDTO;
+import com.kritz.restfulapi.dto.PesananDTO;
 import com.kritz.restfulapi.dto.lists.BahanList;
 import com.kritz.restfulapi.model.Bahan;
 import com.kritz.restfulapi.model.BahanResep;
 import com.kritz.restfulapi.model.LangkahResep;
 import com.kritz.restfulapi.model.Menu;
+import com.kritz.restfulapi.model.MenuPenjualan;
+import com.kritz.restfulapi.model.Penjualan;
+import com.kritz.restfulapi.model.enums.StatusPenjualan;
 import com.kritz.restfulapi.model.Pricelist;
 import com.kritz.restfulapi.model.Toko;
 import com.kritz.restfulapi.model.enums.Kategori;
@@ -22,6 +26,8 @@ import com.kritz.restfulapi.repository.BahanResepRepository;
 import com.kritz.restfulapi.repository.LangkahResepRepository;
 import com.kritz.restfulapi.repository.MenuRepository;
 import com.kritz.restfulapi.repository.PricelistRepository;
+import com.kritz.restfulapi.repository.PenjualanRepository;
+import com.kritz.restfulapi.repository.MenuPenjualanRepository;
 
 import jakarta.transaction.Transactional;
 
@@ -38,10 +44,16 @@ public class MenuService {
     private MenuRepository menuRepository;
 
     @Autowired
+    private PenjualanRepository penjualanRepository;
+
+    @Autowired
     private PricelistRepository pricelistRepository;
 
     @Autowired
     private LangkahResepRepository langkahResepRepository;
+
+    @Autowired
+    private MenuPenjualanRepository menuPenjualanRepository;
 
     @Autowired
     private ImageService imageService;
@@ -77,6 +89,31 @@ public class MenuService {
         return stock;
     }
 
+    public Optional<Penjualan> findCurrentCart(Toko toko) {
+        return penjualanRepository.findByIdTokoAndDeletedAtIsNullAndStatusPenjualan(toko, StatusPenjualan.KERANJANG);
+    }
+
+    public Penjualan editPesanan(MenuPenjualan itemPenjualan, EditPesananDTO editPesananDTO) {
+        for (BahanResep bahanResep : itemPenjualan.getIdMenu().getListBahanResep()) {
+            Bahan bahan = bahanResep.getIdBahan();
+            bahan.getIdStock()
+                    .setStock(bahan.getIdStock().getStock() + (itemPenjualan.getJumlah() * bahanResep.getJumlah()));
+            bahan.getIdStock()
+                    .setStock(bahan.getIdStock().getStock() - (bahanResep.getJumlah() * editPesananDTO.getJumlah()));
+            bahanRepository.save(bahan);
+        }
+        itemPenjualan.setKomentar(editPesananDTO.getDeskripsi());
+        itemPenjualan.setJumlah(editPesananDTO.getJumlah());
+        menuPenjualanRepository.save(itemPenjualan);
+        Penjualan penjualan = itemPenjualan.getIdPenjualan();
+        for (MenuPenjualan mp : penjualan.getListMenuPenjualan()) {
+            if (mp.getId().equals(itemPenjualan.getId())) {
+                mp.setJumlah(editPesananDTO.getJumlah());
+                mp.setKomentar(editPesananDTO.getDeskripsi());
+            }
+        }
+        return penjualan;
+    }
 
     public Menu addMenu(Toko toko, MenuDTO menuDTO) {
         Menu menu = new Menu();
@@ -96,7 +133,8 @@ public class MenuService {
 
         for (BahanList bahanList : menuDTO.getListBahan()) {
             Optional<Bahan> bahanOpt = bahanRepository.findById(bahanList.getIdBahan());
-            if (bahanOpt.isPresent() && bahanOpt.get().getIdToko().getId().equals(toko.getId())) {
+            if (bahanOpt.isPresent() && bahanOpt.get().getIdToko().getId().equals(toko.getId())
+                    && bahanOpt.get().getDeletedAt() == null) {
                 BahanResep bahanResep = new BahanResep();
                 bahanResep.setIdMenu(menu);
                 bahanResep.setIdBahan(bahanOpt.get());
@@ -138,7 +176,8 @@ public class MenuService {
 
         for (BahanList bahanList : menuDTO.getListBahan()) {
             Optional<Bahan> bahanOpt = bahanRepository.findById(bahanList.getIdBahan());
-            if (bahanOpt.isPresent() && bahanOpt.get().getIdToko().getId().equals(toko.getId())) {
+            if (bahanOpt.isPresent() && bahanOpt.get().getIdToko().getId().equals(toko.getId())
+                    && bahanOpt.get().getDeletedAt() == null) {
                 BahanResep bahanResep = new BahanResep();
                 bahanResep.setIdMenu(menu);
                 bahanResep.setIdBahan(bahanOpt.get());
@@ -164,4 +203,48 @@ public class MenuService {
         return menu;
     }
 
+    public Penjualan addPesanan(Toko toko, PesananDTO pesananDTO) {
+        Penjualan penjualan = penjualanRepository
+                .findByIdTokoAndDeletedAtIsNullAndStatusPenjualan(toko, StatusPenjualan.KERANJANG)
+                .orElseGet(() -> {
+                    Penjualan newPenjualan = new Penjualan();
+                    newPenjualan.setIdToko(toko);
+                    newPenjualan.setStatusPenjualan(StatusPenjualan.KERANJANG);
+                    newPenjualan.setTotalBayar(0);
+                    newPenjualan.setDiskon(0);
+                    newPenjualan.setCreatedAt(LocalDateTime.now());
+                    newPenjualan.setEditedAt(LocalDateTime.now());
+                    return penjualanRepository.save(newPenjualan);
+                });
+
+        MenuPenjualan menuPenjualan = new MenuPenjualan();
+        Optional<Menu> menuOpt = findByMenuAndToko(pesananDTO.getIdMenu(), toko);
+        if (menuOpt.isPresent()) {
+            menuPenjualan.setIdMenu(menuOpt.get());
+            menuPenjualan.setIdPenjualan(penjualan);
+            menuPenjualan.setKomentar(pesananDTO.getDeskripsi());
+            menuPenjualan.setJumlah(pesananDTO.getJumlah());
+            menuPenjualanRepository.save(menuPenjualan);
+
+            for (BahanResep bahanResep : menuOpt.get().getListBahanResep()) {
+                Bahan bahan = bahanResep.getIdBahan();
+                bahan.getIdStock()
+                        .setStock(bahan.getIdStock().getStock() - (bahanResep.getJumlah() * pesananDTO.getJumlah()));
+                bahanRepository.save(bahan);
+            }
+        } else {
+            throw new IllegalArgumentException("Menu dengan ID " + pesananDTO.getIdMenu() + " tidak ditemukan.");
+        }
+        return penjualan;
+    }
+
+    public Optional<Menu> findByMenuAndToko(String idMenu, Toko toko) {
+        Optional<Menu> menuOpt = menuRepository.findById(idMenu);
+        if (menuOpt.isPresent() && menuOpt.get().getIdToko().getId().equals(toko.getId())
+                && menuOpt.get().getDeletedAt() == null) {
+            return menuOpt;
+        } else {
+            return Optional.empty();
+        }
+    }
 }

@@ -53,6 +53,9 @@ public class Toko {
     private LocalDateTime editedAt;
 
     @OneToMany(mappedBy = "idToko", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    private Set<Penjualan> listPenjualan;
+
+    @OneToMany(mappedBy = "idToko", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     private Set<Menu> listMenu;
 
     @OneToMany(mappedBy = "idToko", cascade = CascadeType.ALL, fetch = FetchType.LAZY)

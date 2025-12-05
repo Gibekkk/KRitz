@@ -9,7 +9,6 @@ import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
-import jakarta.persistence.OneToOne;
 import jakarta.persistence.Table;
 import lombok.NoArgsConstructor;
 import lombok.AllArgsConstructor;
@@ -32,7 +31,7 @@ public class MenuPenjualan {
     @JoinColumn(nullable = false, name = "id_penjualan", referencedColumnName = "id", foreignKey = @ForeignKey(name = "fk_produkPenjualanPenjualan"))
     private Penjualan idPenjualan;
 
-    @OneToOne
+    @ManyToOne
     @JoinColumn(nullable = false, name = "id_menu", referencedColumnName = "id", foreignKey = @ForeignKey(name = "fk_produkPenjualanMenu"))
     private Menu idMenu;
 
@@ -45,7 +44,7 @@ public class MenuPenjualan {
     @Column(name = "jumlah", nullable = false)
     private int jumlah;
 
-    @Column(name = "komentar", nullable = false, columnDefinition = "TEXT")
+    @Column(name = "komentar", nullable = true, columnDefinition = "TEXT")
     private String komentar;
 
 }

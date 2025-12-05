@@ -14,11 +14,18 @@ import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 
+import com.kritz.restfulapi.dto.EditPesananDTO;
 import com.kritz.restfulapi.dto.MenuDTO;
+import com.kritz.restfulapi.dto.PesananDTO;
 import com.kritz.restfulapi.model.Menu;
+import com.kritz.restfulapi.model.MenuPenjualan;
+import com.kritz.restfulapi.model.Penjualan;
 import com.kritz.restfulapi.model.enums.Level;
+import com.kritz.restfulapi.model.enums.TipePembayaran;
 import com.kritz.restfulapi.model.Toko;
 import com.kritz.restfulapi.model.Session;
 import com.kritz.restfulapi.service.LoginService;
@@ -58,7 +65,7 @@ public class MenuController {
                     Toko toko = session.getIdLogin().getIdToko();
                     ArrayList<Object> menus = new ArrayList<>();
                     for (Menu menu : toko.getListMenu()) {
-                        if (menu.getDeletedAt() == null){
+                        if (menu.getDeletedAt() == null) {
                             int stock = menuService.getMenuStock(menu);
                             menus.add(Map.of(
                                     "id", menu.getId(),
@@ -80,8 +87,8 @@ public class MenuController {
                                             "idLangkahResep", langkahResep.getId(),
                                             "deskripsiLangkah", langkahResep.getDeskripsi(),
                                             "urutan", langkahResep.getUrutan())).toList()));
+                        }
                     }
-                }
                     data = menus;
                 } else {
                     httpCode = HTTPCode.FORBIDDEN;
@@ -259,6 +266,135 @@ public class MenuController {
                     if (!found) {
                         httpCode = HTTPCode.NOT_FOUND;
                         data = new ErrorMessage(httpCode, "Menu dengan ID " + idMenu + " tidak ditemukan.");
+                    }
+                } else {
+                    httpCode = HTTPCode.FORBIDDEN;
+                    data = new ErrorMessage(httpCode, "Akses Ditolak");
+                }
+            } else {
+                httpCode = HTTPCode.BAD_REQUEST;
+                data = new ErrorMessage(httpCode, "Pemeriksaan Autentikasi Gagal");
+            }
+        } catch (IllegalArgumentException e) {
+            httpCode = HTTPCode.BAD_REQUEST;
+            data = new ErrorMessage(httpCode, e.getMessage());
+        } catch (Exception e) {
+            httpCode = HTTPCode.INTERNAL_SERVER_ERROR;
+            data = new ErrorMessage(httpCode, e.getMessage());
+        }
+
+        return ResponseEntity
+                .status(httpCode.getStatus())
+                .contentType(MediaType.APPLICATION_JSON)
+                .body(data);
+    }
+
+    @PostMapping("/cart")
+    public ResponseEntity<Object> addMenuToCart(HttpServletRequest request, @RequestBody PesananDTO pesananDTO) {
+        String sessionToken = request.getHeader("Token");
+        HTTPCode httpCode = HTTPCode.OK;
+        try {
+            pesananDTO.checkDTO();
+            Optional<Session> sessionOpt = loginService.findSessionBySessionToken(sessionToken);
+            if (sessionOpt.isPresent()) {
+                Session session = sessionOpt.get();
+                if (session.getIdLogin().getLevel() == Level.TOKO) {
+                    Toko toko = session.getIdLogin().getIdToko();
+                    Optional<Menu> menuOpt = menuService.findByMenuAndToko(pesananDTO.getIdMenu(), toko);
+                    if (menuOpt.isPresent()) {
+                        Menu menu = menuOpt.get();
+                        if (menuService.getMenuStock(menu) >= pesananDTO.getJumlah()) {
+                            Penjualan penjualan = menuService.addPesanan(toko, pesananDTO);
+                            data = Map.of(
+                                    "idPenjualan", penjualan.getId(),
+                                    "statusPenjualan", penjualan.getStatusPenjualan().toString(),
+                                    "listMenu", penjualan.getListMenuPenjualan().stream().map(menuPenjualan -> Map.of(
+                                            "idItem", menuPenjualan.getId(),
+                                            "idMenu", menuPenjualan.getIdMenu().getId(),
+                                            "namaMenu", menuPenjualan.getIdMenu().getNama(),
+                                            "jumlah", menuPenjualan.getJumlah(),
+                                            "komentar", Optional.ofNullable(menuPenjualan.getKomentar()).orElse(""))).toList(),
+                                    "totalBayar", penjualan.getTotalBayar(),
+                                    "diskon", penjualan.getDiskon(),
+                                    "tipePembayaran",
+                                    Optional.ofNullable(penjualan.getTipePembayaran()).map(TipePembayaran::toString)
+                                            .orElse(""),
+                                    "createdAt", penjualan.getCreatedAt(),
+                                    "editedAt", penjualan.getEditedAt());
+                        } else {
+                            httpCode = HTTPCode.BAD_REQUEST;
+                            data = new ErrorMessage(httpCode, "Stok menu tidak mencukupi untuk pesanan");
+                        }
+                    } else {
+                        httpCode = HTTPCode.NOT_FOUND;
+                        data = new ErrorMessage(httpCode, "Menu tidak ditemukan");
+                    }
+                } else {
+                    httpCode = HTTPCode.FORBIDDEN;
+                    data = new ErrorMessage(httpCode, "Akses Ditolak");
+                }
+            } else {
+                httpCode = HTTPCode.BAD_REQUEST;
+                data = new ErrorMessage(httpCode, "Pemeriksaan Autentikasi Gagal");
+            }
+        } catch (IllegalArgumentException e) {
+            httpCode = HTTPCode.BAD_REQUEST;
+            data = new ErrorMessage(httpCode, e.getMessage());
+        } catch (Exception e) {
+            httpCode = HTTPCode.INTERNAL_SERVER_ERROR;
+            data = new ErrorMessage(httpCode, e.getMessage());
+        }
+
+        return ResponseEntity
+                .status(httpCode.getStatus())
+                .contentType(MediaType.APPLICATION_JSON)
+                .body(data);
+    }
+
+    @PutMapping("/cart/{itemId}")
+    public ResponseEntity<Object> editCartItem(HttpServletRequest request, @RequestBody EditPesananDTO editPesananDTO, @PathVariable String itemId) {
+        String sessionToken = request.getHeader("Token");
+        HTTPCode httpCode = HTTPCode.OK;
+        try {
+            editPesananDTO.checkDTO();
+            Optional<Session> sessionOpt = loginService.findSessionBySessionToken(sessionToken);
+            if (sessionOpt.isPresent()) {
+                Session session = sessionOpt.get();
+                if (session.getIdLogin().getLevel() == Level.TOKO) {
+                    Toko toko = session.getIdLogin().getIdToko();
+                    Optional<Penjualan> penjualanOpt = menuService.findCurrentCart(toko);
+                    if (penjualanOpt.isPresent()) {
+                        Penjualan penjualan = penjualanOpt.get();
+                        MenuPenjualan itemPenjualan = penjualan.getListMenuPenjualan().stream()
+                                .filter(item -> item.getId().equals(itemId))
+                                .findFirst()
+                                .orElseThrow(() -> new IllegalArgumentException("Item dengan ID " + itemId + " tidak ditemukan di keranjang."));
+                        Menu menu = itemPenjualan.getIdMenu();
+                          if (menuService.getMenuStock(menu) >= editPesananDTO.getJumlah() - itemPenjualan.getJumlah()) {
+                            penjualan = menuService.editPesanan(itemPenjualan, editPesananDTO);
+                            data = Map.of(
+                                    "idPenjualan", penjualan.getId(),
+                                    "statusPenjualan", penjualan.getStatusPenjualan().toString(),
+                                    "listMenu", penjualan.getListMenuPenjualan().stream().map(menuPenjualan -> Map.of(
+                                            "idMenuPenjualan", menuPenjualan.getId(),
+                                            "idMenu", menuPenjualan.getIdMenu().getId(),
+                                            "namaMenu", menuPenjualan.getIdMenu().getNama(),
+                                            "jumlah", menuPenjualan.getJumlah(),
+                                            "komentar", Optional.ofNullable(menuPenjualan.getKomentar()).orElse(""))).toList(),
+                                    "totalBayar", penjualan.getTotalBayar(),
+                                    "diskon", penjualan.getDiskon(),
+                                    "tipePembayaran",
+                                    Optional.ofNullable(penjualan.getTipePembayaran()).map(TipePembayaran::toString)
+                                            .orElse(""),
+                                    "createdAt", penjualan.getCreatedAt(),
+                                    "editedAt", penjualan.getEditedAt());
+                        } else {
+                            httpCode = HTTPCode.BAD_REQUEST;
+                            data = new ErrorMessage(httpCode, "Stok menu tidak mencukupi untuk pesanan");
+                        }
+                    } else {
+                        httpCode = HTTPCode.NOT_FOUND;
+                        data = new ErrorMessage(httpCode, "Item Cart tidak ditemukan");
                     }
                 } else {
                     httpCode = HTTPCode.FORBIDDEN;

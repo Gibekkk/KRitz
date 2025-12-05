@@ -78,7 +78,7 @@ public class BahanService {
 
         Stock stock = new Stock();
         stock.setIdBahan(bahan);
-        stock.setStock(0);
+        stock.setStock(bahanDTO.getJumlahBahan());
         bahan.setIdStock(stock);
         stockRepository.save(stock);
         return bahan;

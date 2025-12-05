@@ -4,7 +4,6 @@ import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.ForeignKey;
 import jakarta.persistence.ManyToOne;
-import jakarta.persistence.OneToOne;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
@@ -32,7 +31,7 @@ public class BahanRestock {
     @JoinColumn(nullable = false, name = "id_pengisian_stock", referencedColumnName = "id", foreignKey = @ForeignKey(name = "fk_bahanRestockPengisianStock"))
     private PengisianStock idPengisianStock;
 
-    @OneToOne
+    @ManyToOne
     @JoinColumn(nullable = false, name = "id_bahan", referencedColumnName = "id", foreignKey = @ForeignKey(name = "fk_bahanRestockBahan"))
     private Bahan idBahan;
 

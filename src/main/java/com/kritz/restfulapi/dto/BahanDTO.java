@@ -20,6 +20,7 @@ public class BahanDTO {
     private String namaBahan;
     private String deskripsi;
     private String satuanBahan;
+    private int jumlahBahan;
     private MultipartFile image;
 
     public void checkDTO() {
@@ -28,6 +29,7 @@ public class BahanDTO {
         if(this.namaBahan == null) throw new IllegalArgumentException("Nama Bahan Tidak Boleh Bernilai NULL");
         if(this.deskripsi == null) throw new IllegalArgumentException("Deskripsi Tidak Boleh Bernilai NULL");
         if(this.satuanBahan == null) throw new IllegalArgumentException("Satuan Bahan Tidak Boleh Bernilai NULL");
+        if(this.jumlahBahan < 0) throw new IllegalArgumentException("Jumlah Bahan Tidak Boleh Bernilai Negatif");
         SatuanBahan.fromString(satuanBahan); //cek valid satuan bahan
     }
 
