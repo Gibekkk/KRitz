@@ -115,6 +115,20 @@ public class MenuService {
         return penjualan;
     }
 
+    @Transactional
+    public Penjualan deletePesanan(MenuPenjualan itemPenjualan) {
+        for (BahanResep bahanResep : itemPenjualan.getIdMenu().getListBahanResep()) {
+            Bahan bahan = bahanResep.getIdBahan();
+            bahan.getIdStock()
+                    .setStock(bahan.getIdStock().getStock() + (itemPenjualan.getJumlah() * bahanResep.getJumlah()));
+            bahanRepository.save(bahan);
+        }
+        Penjualan penjualan = itemPenjualan.getIdPenjualan();
+        penjualan.getListMenuPenjualan().remove(itemPenjualan);
+        menuPenjualanRepository.delete(itemPenjualan);
+        return penjualan;
+    }
+
     public Menu addMenu(Toko toko, MenuDTO menuDTO) {
         Menu menu = new Menu();
         menu.setIdToko(toko);

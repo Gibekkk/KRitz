@@ -313,7 +313,8 @@ public class MenuController {
                                             "idMenu", menuPenjualan.getIdMenu().getId(),
                                             "namaMenu", menuPenjualan.getIdMenu().getNama(),
                                             "jumlah", menuPenjualan.getJumlah(),
-                                            "komentar", Optional.ofNullable(menuPenjualan.getKomentar()).orElse(""))).toList(),
+                                            "komentar", Optional.ofNullable(menuPenjualan.getKomentar()).orElse("")))
+                                            .toList(),
                                     "totalBayar", penjualan.getTotalBayar(),
                                     "diskon", penjualan.getDiskon(),
                                     "tipePembayaran",
@@ -352,7 +353,8 @@ public class MenuController {
     }
 
     @PutMapping("/cart/{itemId}")
-    public ResponseEntity<Object> editCartItem(HttpServletRequest request, @RequestBody EditPesananDTO editPesananDTO, @PathVariable String itemId) {
+    public ResponseEntity<Object> editCartItem(HttpServletRequest request, @RequestBody EditPesananDTO editPesananDTO,
+            @PathVariable String itemId) {
         String sessionToken = request.getHeader("Token");
         HTTPCode httpCode = HTTPCode.OK;
         try {
@@ -368,19 +370,21 @@ public class MenuController {
                         MenuPenjualan itemPenjualan = penjualan.getListMenuPenjualan().stream()
                                 .filter(item -> item.getId().equals(itemId))
                                 .findFirst()
-                                .orElseThrow(() -> new IllegalArgumentException("Item dengan ID " + itemId + " tidak ditemukan di keranjang."));
+                                .orElseThrow(() -> new IllegalArgumentException(
+                                        "Item dengan ID " + itemId + " tidak ditemukan di keranjang."));
                         Menu menu = itemPenjualan.getIdMenu();
-                          if (menuService.getMenuStock(menu) >= editPesananDTO.getJumlah() - itemPenjualan.getJumlah()) {
+                        if (menuService.getMenuStock(menu) >= editPesananDTO.getJumlah() - itemPenjualan.getJumlah()) {
                             penjualan = menuService.editPesanan(itemPenjualan, editPesananDTO);
                             data = Map.of(
                                     "idPenjualan", penjualan.getId(),
                                     "statusPenjualan", penjualan.getStatusPenjualan().toString(),
                                     "listMenu", penjualan.getListMenuPenjualan().stream().map(menuPenjualan -> Map.of(
-                                            "idMenuPenjualan", menuPenjualan.getId(),
+                                            "idItem", menuPenjualan.getId(),
                                             "idMenu", menuPenjualan.getIdMenu().getId(),
                                             "namaMenu", menuPenjualan.getIdMenu().getNama(),
                                             "jumlah", menuPenjualan.getJumlah(),
-                                            "komentar", Optional.ofNullable(menuPenjualan.getKomentar()).orElse(""))).toList(),
+                                            "komentar", Optional.ofNullable(menuPenjualan.getKomentar()).orElse("")))
+                                            .toList(),
                                     "totalBayar", penjualan.getTotalBayar(),
                                     "diskon", penjualan.getDiskon(),
                                     "tipePembayaran",
@@ -392,6 +396,172 @@ public class MenuController {
                             httpCode = HTTPCode.BAD_REQUEST;
                             data = new ErrorMessage(httpCode, "Stok menu tidak mencukupi untuk pesanan");
                         }
+                    } else {
+                        httpCode = HTTPCode.NOT_FOUND;
+                        data = new ErrorMessage(httpCode, "Item Cart tidak ditemukan");
+                    }
+                } else {
+                    httpCode = HTTPCode.FORBIDDEN;
+                    data = new ErrorMessage(httpCode, "Akses Ditolak");
+                }
+            } else {
+                httpCode = HTTPCode.BAD_REQUEST;
+                data = new ErrorMessage(httpCode, "Pemeriksaan Autentikasi Gagal");
+            }
+        } catch (IllegalArgumentException e) {
+            httpCode = HTTPCode.BAD_REQUEST;
+            data = new ErrorMessage(httpCode, e.getMessage());
+        } catch (Exception e) {
+            httpCode = HTTPCode.INTERNAL_SERVER_ERROR;
+            data = new ErrorMessage(httpCode, e.getMessage());
+        }
+
+        return ResponseEntity
+                .status(httpCode.getStatus())
+                .contentType(MediaType.APPLICATION_JSON)
+                .body(data);
+    }
+
+    @DeleteMapping("/cart/{itemId}")
+    public ResponseEntity<Object> deleteCartItem(HttpServletRequest request, @PathVariable String itemId) {
+        String sessionToken = request.getHeader("Token");
+        HTTPCode httpCode = HTTPCode.OK;
+        try {
+            Optional<Session> sessionOpt = loginService.findSessionBySessionToken(sessionToken);
+            if (sessionOpt.isPresent()) {
+                Session session = sessionOpt.get();
+                if (session.getIdLogin().getLevel() == Level.TOKO) {
+                    Toko toko = session.getIdLogin().getIdToko();
+                    Optional<Penjualan> penjualanOpt = menuService.findCurrentCart(toko);
+                    if (penjualanOpt.isPresent()) {
+                        Penjualan penjualan = penjualanOpt.get();
+                        MenuPenjualan itemPenjualan = penjualan.getListMenuPenjualan().stream()
+                                .filter(item -> item.getId().equals(itemId))
+                                .findFirst()
+                                .orElseThrow(() -> new IllegalArgumentException(
+                                        "Item dengan ID " + itemId + " tidak ditemukan di keranjang."));
+                        penjualan = menuService.deletePesanan(itemPenjualan);
+                        data = Map.of("idPenjualan", penjualan.getId(),
+                                "statusPenjualan", penjualan.getStatusPenjualan().toString(),
+                                "listMenu", penjualan.getListMenuPenjualan().stream().map(menuPenjualan -> Map.of(
+                                        "idItem", menuPenjualan.getId(),
+                                        "idMenu", menuPenjualan.getIdMenu().getId(),
+                                        "namaMenu", menuPenjualan.getIdMenu().getNama(),
+                                        "jumlah", menuPenjualan.getJumlah(),
+                                        "komentar", Optional.ofNullable(menuPenjualan.getKomentar()).orElse("")))
+                                        .toList(),
+                                "totalBayar", penjualan.getTotalBayar(),
+                                "diskon", penjualan.getDiskon(),
+                                "tipePembayaran",
+                                Optional.ofNullable(penjualan.getTipePembayaran()).map(TipePembayaran::toString)
+                                        .orElse(""),
+                                "createdAt", penjualan.getCreatedAt(),
+                                "editedAt", penjualan.getEditedAt());
+                    } else {
+                        httpCode = HTTPCode.NOT_FOUND;
+                        data = new ErrorMessage(httpCode, "Item Cart tidak ditemukan");
+                    }
+                } else {
+                    httpCode = HTTPCode.FORBIDDEN;
+                    data = new ErrorMessage(httpCode, "Akses Ditolak");
+                }
+            } else {
+                httpCode = HTTPCode.BAD_REQUEST;
+                data = new ErrorMessage(httpCode, "Pemeriksaan Autentikasi Gagal");
+            }
+        } catch (IllegalArgumentException e) {
+            httpCode = HTTPCode.BAD_REQUEST;
+            data = new ErrorMessage(httpCode, e.getMessage());
+        } catch (Exception e) {
+            httpCode = HTTPCode.INTERNAL_SERVER_ERROR;
+            data = new ErrorMessage(httpCode, e.getMessage());
+        }
+
+        return ResponseEntity
+                .status(httpCode.getStatus())
+                .contentType(MediaType.APPLICATION_JSON)
+                .body(data);
+    }
+
+    @GetMapping("/cart/{itemId}")
+    public ResponseEntity<Object> getItemCartById(HttpServletRequest request, @PathVariable String itemId) {
+        String sessionToken = request.getHeader("Token");
+        HTTPCode httpCode = HTTPCode.OK;
+        try {
+            Optional<Session> sessionOpt = loginService.findSessionBySessionToken(sessionToken);
+            if (sessionOpt.isPresent()) {
+                Session session = sessionOpt.get();
+                if (session.getIdLogin().getLevel() == Level.TOKO) {
+                    Toko toko = session.getIdLogin().getIdToko();
+                    Optional<Penjualan> penjualanOpt = menuService.findCurrentCart(toko);
+                    if (penjualanOpt.isPresent()) {
+                        Penjualan penjualan = penjualanOpt.get();
+                        MenuPenjualan itemPenjualan = penjualan.getListMenuPenjualan().stream()
+                                .filter(item -> item.getId().equals(itemId))
+                                .findFirst()
+                                .orElseThrow(() -> new IllegalArgumentException(
+                                        "Item dengan ID " + itemId + " tidak ditemukan di keranjang."));
+                        data = Map.of("idItem", itemPenjualan.getId(),
+                                "idMenu", itemPenjualan.getIdMenu().getId(),
+                                "namaMenu", itemPenjualan.getIdMenu().getNama(),
+                                "jumlah", itemPenjualan.getJumlah(),
+                                "komentar", Optional.ofNullable(itemPenjualan.getKomentar()).orElse(""));
+                    } else {
+                        httpCode = HTTPCode.NOT_FOUND;
+                        data = new ErrorMessage(httpCode, "Item Cart tidak ditemukan");
+                    }
+                } else {
+                    httpCode = HTTPCode.FORBIDDEN;
+                    data = new ErrorMessage(httpCode, "Akses Ditolak");
+                }
+            } else {
+                httpCode = HTTPCode.BAD_REQUEST;
+                data = new ErrorMessage(httpCode, "Pemeriksaan Autentikasi Gagal");
+            }
+        } catch (IllegalArgumentException e) {
+            httpCode = HTTPCode.BAD_REQUEST;
+            data = new ErrorMessage(httpCode, e.getMessage());
+        } catch (Exception e) {
+            httpCode = HTTPCode.INTERNAL_SERVER_ERROR;
+            data = new ErrorMessage(httpCode, e.getMessage());
+        }
+
+        return ResponseEntity
+                .status(httpCode.getStatus())
+                .contentType(MediaType.APPLICATION_JSON)
+                .body(data);
+    }
+
+    @GetMapping("/cart")
+    public ResponseEntity<Object> getCartItems(HttpServletRequest request) {
+        String sessionToken = request.getHeader("Token");
+        HTTPCode httpCode = HTTPCode.OK;
+        try {
+            Optional<Session> sessionOpt = loginService.findSessionBySessionToken(sessionToken);
+            if (sessionOpt.isPresent()) {
+                Session session = sessionOpt.get();
+                if (session.getIdLogin().getLevel() == Level.TOKO) {
+                    Toko toko = session.getIdLogin().getIdToko();
+                    Optional<Penjualan> penjualanOpt = menuService.findCurrentCart(toko);
+                    if (penjualanOpt.isPresent()) {
+                        Penjualan penjualan = penjualanOpt.get();
+                        ;
+                        data = Map.of("idPenjualan", penjualan.getId(),
+                                "statusPenjualan", penjualan.getStatusPenjualan().toString(),
+                                "listMenu", penjualan.getListMenuPenjualan().stream().map(menuPenjualan -> Map.of(
+                                        "idItem", menuPenjualan.getId(),
+                                        "idMenu", menuPenjualan.getIdMenu().getId(),
+                                        "namaMenu", menuPenjualan.getIdMenu().getNama(),
+                                        "jumlah", menuPenjualan.getJumlah(),
+                                        "komentar", Optional.ofNullable(menuPenjualan.getKomentar()).orElse("")))
+                                        .toList(),
+                                "totalBayar", penjualan.getTotalBayar(),
+                                "diskon", penjualan.getDiskon(),
+                                "tipePembayaran",
+                                Optional.ofNullable(penjualan.getTipePembayaran()).map(TipePembayaran::toString)
+                                        .orElse(""),
+                                "createdAt", penjualan.getCreatedAt(),
+                                "editedAt", penjualan.getEditedAt());
                     } else {
                         httpCode = HTTPCode.NOT_FOUND;
                         data = new ErrorMessage(httpCode, "Item Cart tidak ditemukan");
