@@ -9,6 +9,7 @@ import org.springframework.stereotype.Service;
 import com.kritz.restfulapi.dto.EditPesananDTO;
 import com.kritz.restfulapi.dto.LangkahDTO;
 import com.kritz.restfulapi.dto.MenuDTO;
+import com.kritz.restfulapi.dto.PaymentDTO;
 import com.kritz.restfulapi.dto.PesananDTO;
 import com.kritz.restfulapi.dto.lists.BahanList;
 import com.kritz.restfulapi.model.Bahan;
@@ -18,6 +19,7 @@ import com.kritz.restfulapi.model.Menu;
 import com.kritz.restfulapi.model.MenuPenjualan;
 import com.kritz.restfulapi.model.Penjualan;
 import com.kritz.restfulapi.model.enums.StatusPenjualan;
+import com.kritz.restfulapi.model.enums.TipePembayaran;
 import com.kritz.restfulapi.model.Pricelist;
 import com.kritz.restfulapi.model.Toko;
 import com.kritz.restfulapi.model.enums.Kategori;
@@ -93,6 +95,10 @@ public class MenuService {
         return penjualanRepository.findByIdTokoAndDeletedAtIsNullAndStatusPenjualan(toko, StatusPenjualan.KERANJANG);
     }
 
+    public Optional<Penjualan> findCurrentCartPayment(Toko toko) {
+        return penjualanRepository.findByIdTokoAndDeletedAtIsNullAndStatusPenjualan(toko, StatusPenjualan.PEMBAYARAN);
+    }
+
     public Penjualan editPesanan(MenuPenjualan itemPenjualan, EditPesananDTO editPesananDTO) {
         for (BahanResep bahanResep : itemPenjualan.getIdMenu().getListBahanResep()) {
             Bahan bahan = bahanResep.getIdBahan();
@@ -127,6 +133,19 @@ public class MenuService {
         penjualan.getListMenuPenjualan().remove(itemPenjualan);
         menuPenjualanRepository.delete(itemPenjualan);
         return penjualan;
+    }
+
+    public Penjualan cartToPayment(Penjualan penjualan) {
+        penjualan.setStatusPenjualan(StatusPenjualan.PEMBAYARAN);
+        penjualan.setEditedAt(LocalDateTime.now());
+        return penjualanRepository.save(penjualan);
+    }
+
+    public Penjualan completePayment(Penjualan penjualan, PaymentDTO paymentDTO) {
+        penjualan.setEditedAt(LocalDateTime.now());
+        penjualan.setNamaPelanggan(paymentDTO.getNamaPelanggan());
+        penjualan.setTipePembayaran(TipePembayaran.fromString(paymentDTO.getTipePembayaran()));
+        return penjualanRepository.save(penjualan);
     }
 
     public Menu addMenu(Toko toko, MenuDTO menuDTO) {

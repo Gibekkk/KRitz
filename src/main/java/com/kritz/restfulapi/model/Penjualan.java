@@ -41,11 +41,14 @@ public class Penjualan {
     @Column(name = "status_penjualan", nullable = false)
     private StatusPenjualan statusPenjualan;
 
-    @Column(name = "total_bayar", nullable = false, length = 255)
+    @Column(name = "total_bayar", nullable = false)
     private int totalBayar;
 
-    @Column(name = "diskon", nullable = false, length = 255)
+    @Column(name = "diskon", nullable = false)
     private double diskon;
+
+    @Column(name = "diskon", nullable = false, length = 25)
+    private String namaPelanggan;
 
     @Enumerated(EnumType.STRING)
     @Column(name = "tipe_pembayaran", nullable = true)
