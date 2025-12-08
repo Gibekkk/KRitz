@@ -694,6 +694,9 @@ public class MenuController {
                     Optional<Penjualan> penjualanOpt = menuService.findCurrentCartPayment(toko);
                     if (penjualanOpt.isPresent()) {
                         Penjualan penjualan = penjualanOpt.get();
+                        if(penjualan.getTotalHarga() > paymentDTO.getTotalBayar()) {
+                            throw new IllegalArgumentException("Total Bayar tidak mencukupi jumlah yang harus dibayar");
+                        }
                         penjualan = menuService.completePayment(penjualan, paymentDTO);
                         data = Map.of("idPenjualan", penjualan.getId(),
                                 "statusPenjualan", penjualan.getStatusPenjualan().toString(),

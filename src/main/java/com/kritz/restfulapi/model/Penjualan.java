@@ -69,4 +69,14 @@ public class Penjualan {
 
     @OneToMany(mappedBy = "idPenjualan", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     private Set<MenuPenjualan> listMenuPenjualan;
+
+    public int getTotalHarga() {
+        int totalHarga = 0;
+        for (MenuPenjualan mp : listMenuPenjualan) {
+            totalHarga += mp.getHarga() - (mp.getHarga() * mp.getDiskon() / 100);
+        }
+        totalHarga = (int) (totalHarga - (totalHarga * diskon / 100));
+        totalHarga = Math.floorDiv(totalHarga, 100) * 100;
+        return totalHarga;
+    }
 }

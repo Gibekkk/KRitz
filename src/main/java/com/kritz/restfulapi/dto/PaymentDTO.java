@@ -17,13 +17,14 @@ import lombok.NoArgsConstructor;
 public class PaymentDTO {
     private String namaPelanggan;
     private String tipePembayaran;
-
+    private int totalBayar;
 
     public void checkDTO() {
         trim();
         if(this.namaPelanggan == null) throw new IllegalArgumentException("ID Menu Tidak Boleh Bernilai NULL");
         if(this.tipePembayaran == null) throw new IllegalArgumentException("Tipe Pembayaran Tidak Boleh Bernilai NULL");
         TipePembayaran.fromString(tipePembayaran);
+        if(this.totalBayar <= 0 || this.totalBayar % 100 != 0) throw new IllegalArgumentException("Total Bayar Harus Lebih Besar Dari 0 dan Kelipatan 100");
     }
 
     public void checkLength() {

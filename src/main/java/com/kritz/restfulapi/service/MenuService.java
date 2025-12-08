@@ -110,12 +110,15 @@ public class MenuService {
         }
         itemPenjualan.setKomentar(editPesananDTO.getDeskripsi());
         itemPenjualan.setJumlah(editPesananDTO.getJumlah());
+        itemPenjualan.setHarga(itemPenjualan.getIdMenu().getIdPricelist().getHarga());
+        itemPenjualan.setDiskon(itemPenjualan.getIdMenu().getIdPricelist().getDiskon());
         menuPenjualanRepository.save(itemPenjualan);
         Penjualan penjualan = itemPenjualan.getIdPenjualan();
         for (MenuPenjualan mp : penjualan.getListMenuPenjualan()) {
             if (mp.getId().equals(itemPenjualan.getId())) {
                 mp.setJumlah(editPesananDTO.getJumlah());
                 mp.setKomentar(editPesananDTO.getDeskripsi());
+                break;
             }
         }
         return penjualan;
@@ -145,6 +148,8 @@ public class MenuService {
         penjualan.setEditedAt(LocalDateTime.now());
         penjualan.setNamaPelanggan(paymentDTO.getNamaPelanggan());
         penjualan.setTipePembayaran(TipePembayaran.fromString(paymentDTO.getTipePembayaran()));
+        penjualan.setTotalBayar(paymentDTO.getTotalBayar());
+        penjualan.setStatusPenjualan(StatusPenjualan.TERJUAL);
         return penjualanRepository.save(penjualan);
     }
 
@@ -257,6 +262,8 @@ public class MenuService {
             menuPenjualan.setIdPenjualan(penjualan);
             menuPenjualan.setKomentar(pesananDTO.getDeskripsi());
             menuPenjualan.setJumlah(pesananDTO.getJumlah());
+            menuPenjualan.setHarga(menuOpt.get().getIdPricelist().getHarga());
+            menuPenjualan.setDiskon(menuOpt.get().getIdPricelist().getDiskon());
             menuPenjualanRepository.save(menuPenjualan);
 
             for (BahanResep bahanResep : menuOpt.get().getListBahanResep()) {
