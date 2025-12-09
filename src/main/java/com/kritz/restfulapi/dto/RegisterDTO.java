@@ -28,6 +28,20 @@ public class RegisterDTO {
         if(this.fcmToken == null) throw new IllegalArgumentException("Token FCM Tidak Boleh Bernilai NULL");
     }
 
+    public void checkLength() {
+        boolean email = Optional.ofNullable(this.email)
+                .map(s -> s.length() <= 50 && s.matches("^[a-zA-Z0-9. _%+-]+@[a-zA-Z0-9. -]+\\.[a-zA-Z]{2,}$"))
+                .orElse(true);
+        
+        if (!email)
+            throw new IllegalArgumentException("Email Tidak Valid atau Melewati Batas Karakter");
+        boolean nama = Optional.ofNullable(this.nama)
+                .map(s -> s.length() <= 100)
+                .orElse(true);
+        if (!nama)
+            throw new IllegalArgumentException("Nama Toko Melewati Batas Karakter");
+    }
+
     public void trim() {
         this.nama = Optional.ofNullable(this.nama).map(String::trim).filter(s -> !s.isBlank()).orElse(null);
         this.email = Optional.ofNullable(this.email).map(String::trim).filter(s -> !s.isBlank()).orElse(null);
