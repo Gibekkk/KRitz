@@ -1,5 +1,6 @@
 package com.kritz.restfulapi.service;
 
+import java.util.HashSet;
 import java.util.Optional;
 import java.time.LocalDateTime;
 
@@ -252,6 +253,7 @@ public class MenuService {
                     newPenjualan.setDiskon(0);
                     newPenjualan.setCreatedAt(LocalDateTime.now());
                     newPenjualan.setEditedAt(LocalDateTime.now());
+                    newPenjualan.setListMenuPenjualan(new HashSet<>());
                     return penjualanRepository.save(newPenjualan);
                 });
 
@@ -264,6 +266,7 @@ public class MenuService {
             menuPenjualan.setJumlah(pesananDTO.getJumlah());
             menuPenjualan.setHarga(menuOpt.get().getIdPricelist().getHarga());
             menuPenjualan.setDiskon(menuOpt.get().getIdPricelist().getDiskon());
+            penjualan.getListMenuPenjualan().add(menuPenjualan);
             menuPenjualanRepository.save(menuPenjualan);
 
             for (BahanResep bahanResep : menuOpt.get().getListBahanResep()) {

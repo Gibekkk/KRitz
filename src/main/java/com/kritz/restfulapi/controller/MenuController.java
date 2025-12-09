@@ -317,6 +317,7 @@ public class MenuController {
                                             "komentar", Optional.ofNullable(menuPenjualan.getKomentar()).orElse("")))
                                             .toList(),
                                     "totalBayar", penjualan.getTotalBayar(),
+                                    "totalHarga", penjualan.getTotalHarga(),
                                     "diskon", penjualan.getDiskon(),
                                     "tipePembayaran",
                                     Optional.ofNullable(penjualan.getTipePembayaran()).map(TipePembayaran::toString)
@@ -387,6 +388,7 @@ public class MenuController {
                                             "komentar", Optional.ofNullable(menuPenjualan.getKomentar()).orElse("")))
                                             .toList(),
                                     "totalBayar", penjualan.getTotalBayar(),
+                                    "totalHarga", penjualan.getTotalHarga(),
                                     "diskon", penjualan.getDiskon(),
                                     "tipePembayaran",
                                     Optional.ofNullable(penjualan.getTipePembayaran()).map(TipePembayaran::toString)
@@ -452,6 +454,7 @@ public class MenuController {
                                         "komentar", Optional.ofNullable(menuPenjualan.getKomentar()).orElse("")))
                                         .toList(),
                                 "totalBayar", penjualan.getTotalBayar(),
+                                "totalHarga", penjualan.getTotalHarga(),
                                 "diskon", penjualan.getDiskon(),
                                 "tipePembayaran",
                                 Optional.ofNullable(penjualan.getTipePembayaran()).map(TipePembayaran::toString)
@@ -556,6 +559,7 @@ public class MenuController {
                                         "komentar", Optional.ofNullable(menuPenjualan.getKomentar()).orElse("")))
                                         .toList(),
                                 "totalBayar", penjualan.getTotalBayar(),
+                                "totalHarga", penjualan.getTotalHarga(),
                                 "diskon", penjualan.getDiskon(),
                                 "tipePembayaran",
                                 Optional.ofNullable(penjualan.getTipePembayaran()).map(TipePembayaran::toString)
@@ -648,6 +652,7 @@ public class MenuController {
                                         "komentar", Optional.ofNullable(menuPenjualan.getKomentar()).orElse("")))
                                         .toList(),
                                 "totalBayar", penjualan.getTotalBayar(),
+                                "totalHarga", penjualan.getTotalHarga(),
                                 "diskon", penjualan.getDiskon(),
                                 "tipePembayaran",
                                 Optional.ofNullable(penjualan.getTipePembayaran()).map(TipePembayaran::toString)
@@ -708,6 +713,7 @@ public class MenuController {
                                         "komentar", Optional.ofNullable(menuPenjualan.getKomentar()).orElse("")))
                                         .toList(),
                                 "totalBayar", penjualan.getTotalBayar(),
+                                "totalHarga", penjualan.getTotalHarga(),
                                 "diskon", penjualan.getDiskon(),
                                 "tipePembayaran",
                                 Optional.ofNullable(penjualan.getTipePembayaran()).map(TipePembayaran::toString)
