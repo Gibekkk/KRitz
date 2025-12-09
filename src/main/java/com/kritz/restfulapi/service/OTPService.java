@@ -63,20 +63,19 @@ public class OTPService {
         return otp;
     }
 
-    // // Generate dan simpan OTP
-    // public Optional<OTP> refreshOTP(Login login) {
-    //     String code = String.format("%0" + OTP_LENGTH + "d", new Random().nextInt(999_999));
-    //     LocalDateTime expiry = LocalDateTime.now().plusMinutes(OTP_TIME_OUT);
-    //     Optional<OTP> existingOtp = otpRepository.findByIdLogin(login);
-    //     if (existingOtp.isPresent()) {
-    //         OTP otp = existingOtp.get();
-    //         otp.setExpiryTime(expiry);
-    //         otp.setCode(code);
-    //         otpRepository.save(otp);
-    //         return Optional.of(otp);
-    //     }
-    //     return Optional.empty();
-    // }
+    public Optional<OTP> refreshOTP(Login login) {
+        String code = String.format("%0" + OTP_LENGTH + "d", new Random().nextInt(999_999));
+        LocalDateTime expiry = LocalDateTime.now().plusMinutes(OTP_TIME_OUT);
+        Optional<OTP> existingOtp = otpRepository.findByIdLogin(login);
+        if (existingOtp.isPresent()) {
+            OTP otp = existingOtp.get();
+            otp.setValidUntil(expiry);
+            otp.setKode(code);
+            otpRepository.save(otp);
+            return Optional.of(otp);
+        }
+        return Optional.empty();
+    }
 
     // public Boolean deleteOTP(Login login) {
     //     Optional<OTP> existingOtp = otpRepository.findByIdLogin(login);
@@ -95,19 +94,16 @@ public class OTPService {
         }
     }
 
-    // @Transactional
-    // public void clearRedundantOTP() {
-    //     List<OTP> otps = otpRepository.findAll();
-    //     for (OTP otp : otps) {
-    //         if (otp.getExpiryTime().plusMinutes(OTP_CLEAR).isBefore(LocalDateTime.now())) {
-    //             boolean isRegistration = otp.getIsRegistration();
-    //             Login login = otp.getIdLogin();
-    //             otpRepository.delete(otp);
-    //             if (isRegistration)
-    //                 cleanUpService.cleanLogin(login);
-    //         }
-    //     }
-    // }
+    @Transactional
+    public void clearRedundantOTP() {
+        List<OTP> otps = otpRepository.findAll();
+        for (OTP otp : otps) {
+            if (otp.getValidUntil().plusMinutes(OTP_CLEAR).isBefore(LocalDateTime.now())) {
+                boolean isRegistration = otp.getOtpType() == OTPType.REGISTER;
+                deleteOTP(otp, isRegistration);
+            }
+        }
+    }
 
     @Transactional
     public Optional<Login> verifyOTP(String loginId, String code) {

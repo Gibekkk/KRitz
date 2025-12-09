@@ -3,6 +3,7 @@ package com.kritz.restfulapi.controller;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.PatchMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -67,7 +68,7 @@ public class LoginController {
                         "token", session.getToken());
             } else {
                 httpCode = HTTPCode.UNAUTHORIZED;
-                data = new ErrorMessage(httpCode, "Invalid email or password");
+                data = new ErrorMessage(httpCode, "Email atau Password Salah");
             }
         } catch (IllegalArgumentException e) {
             httpCode = HTTPCode.BAD_REQUEST;
@@ -97,7 +98,7 @@ public class LoginController {
                         "otpValidUntil", newOTP.getValidUntil());
             } else {
                 httpCode = HTTPCode.CONFLICT;
-                data = new ErrorMessage(httpCode, "Email is already registered");
+                data = new ErrorMessage(httpCode, "Email sudah terdaftar");
             }
         } catch (IllegalArgumentException e) {
             httpCode = HTTPCode.BAD_REQUEST;
@@ -127,7 +128,43 @@ public class LoginController {
                         "token", session.getToken());
             } else {
                 httpCode = HTTPCode.UNAUTHORIZED;
-                data = new ErrorMessage(httpCode, "Invalid OTP or OTP has expired");
+                data = new ErrorMessage(httpCode, "OTP Tidak Valid atau Telah Kedaluwarsa");
+            }
+        } catch (IllegalArgumentException e) {
+            httpCode = HTTPCode.BAD_REQUEST;
+            data = new ErrorMessage(httpCode, e.getMessage());
+        } catch (Exception e) {
+            httpCode = HTTPCode.INTERNAL_SERVER_ERROR;
+            data = new ErrorMessage(httpCode, e.getMessage());
+        }
+        return ResponseEntity
+                .status(httpCode.getStatus())
+                .contentType(MediaType.APPLICATION_JSON)
+                .body(data);
+    }
+
+    @PostMapping("/refreshOtp/{loginId}")
+    public ResponseEntity<Object> refreshOtp(@PathVariable String loginId) {
+        HTTPCode httpCode = HTTPCode.OK;
+        try {
+            Optional<Login> loginOpt = loginService.findLoginById(loginId);
+            if (loginOpt.isPresent()) {
+                Login login = loginOpt.get();
+                Optional<OTP> otpOpt = otpService.refreshOTP(login);
+                if(otpOpt.isPresent()) {
+                    OTP otp = otpOpt.get();
+                    emailService.sendOTPRegisToLogin(login, otp);
+                data = Map.of(
+                        "loginId", login.getId(),
+                        "otpValidUntil", otp.getValidUntil());
+                } else {
+                    httpCode = HTTPCode.NOT_FOUND;
+                    data = new ErrorMessage(httpCode, "OTP Tidak Ditemukan");
+                }
+
+            } else {
+                httpCode = HTTPCode.UNAUTHORIZED;
+                data = new ErrorMessage(httpCode, "Login ID Tidak Ditemukan");
             }
         } catch (IllegalArgumentException e) {
             httpCode = HTTPCode.BAD_REQUEST;

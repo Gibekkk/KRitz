@@ -64,12 +64,20 @@ public class LoginService {
         return true;
     }
 
+    public Optional<Login> findLoginByEmail(String email) {
+        return loginRepository.findByEmail(email);
+    }
+
+    public Optional<Login> findLoginById(String loginId) {
+        return loginRepository.findById(loginId);
+    }
+
     public Session regenerateSessionToken(Login login, String fcmToken) {
-        Optional<Session> conflictSessionOpt = sessionRepository.findByFcmToken(fcmToken);
-        if(conflictSessionOpt.isPresent()) {
-            Session conflictSession = conflictSessionOpt.get();
-            deleteSession(conflictSession);
-        }
+        // Optional<Session> conflictSessionOpt = sessionRepository.findByFcmToken(fcmToken);
+        // if(conflictSessionOpt.isPresent()) {
+        //     Session conflictSession = conflictSessionOpt.get();
+        //     deleteSession(conflictSession);
+        // }
         Session session = new Session();
         session.setIdLogin(login);
         session.setToken(UUID.randomUUID().toString());
