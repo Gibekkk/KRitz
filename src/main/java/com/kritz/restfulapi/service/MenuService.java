@@ -92,6 +92,10 @@ public class MenuService {
         return stock;
     }
 
+    public Optional<Penjualan> findCurrentCartNotPurchased(Toko toko) {
+        return penjualanRepository.findByIdTokoAndDeletedAtIsNullAndStatusPenjualanNot(toko, StatusPenjualan.TERJUAL);
+    }
+
     public Optional<Penjualan> findCurrentCart(Toko toko) {
         return penjualanRepository.findByIdTokoAndDeletedAtIsNullAndStatusPenjualan(toko, StatusPenjualan.KERANJANG);
     }
@@ -141,6 +145,12 @@ public class MenuService {
 
     public Penjualan cartToPayment(Penjualan penjualan) {
         penjualan.setStatusPenjualan(StatusPenjualan.PEMBAYARAN);
+        penjualan.setEditedAt(LocalDateTime.now());
+        return penjualanRepository.save(penjualan);
+    }
+
+    public Penjualan cartBackToCart(Penjualan penjualan) {
+        penjualan.setStatusPenjualan(StatusPenjualan.KERANJANG);
         penjualan.setEditedAt(LocalDateTime.now());
         return penjualanRepository.save(penjualan);
     }

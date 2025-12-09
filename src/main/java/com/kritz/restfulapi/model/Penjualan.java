@@ -73,7 +73,7 @@ public class Penjualan {
     public int getTotalHarga() {
         int totalHarga = 0;
         for (MenuPenjualan mp : listMenuPenjualan) {
-            totalHarga += mp.getHarga() - (mp.getHarga() * mp.getDiskon() / 100);
+            totalHarga += (mp.getHarga() - (mp.getHarga() * mp.getDiskon() / 100)) * mp.getJumlah();
         }
         totalHarga = (int) (totalHarga - (totalHarga * diskon / 100));
         totalHarga = Math.floorDiv(totalHarga, 100) * 100;

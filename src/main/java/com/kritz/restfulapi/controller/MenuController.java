@@ -314,6 +314,8 @@ public class MenuController {
                                             "idMenu", menuPenjualan.getIdMenu().getId(),
                                             "namaMenu", menuPenjualan.getIdMenu().getNama(),
                                             "jumlah", menuPenjualan.getJumlah(),
+                                            "totalHarga", menuPenjualan.getHarga() * menuPenjualan.getJumlah(),
+                                            "diskon", menuPenjualan.getDiskon(),
                                             "komentar", Optional.ofNullable(menuPenjualan.getKomentar()).orElse("")))
                                             .toList(),
                                     "totalBayar", penjualan.getTotalBayar(),
@@ -385,6 +387,8 @@ public class MenuController {
                                             "idMenu", menuPenjualan.getIdMenu().getId(),
                                             "namaMenu", menuPenjualan.getIdMenu().getNama(),
                                             "jumlah", menuPenjualan.getJumlah(),
+                                            "totalHarga", menuPenjualan.getHarga() * menuPenjualan.getJumlah(),
+                                            "diskon", menuPenjualan.getDiskon(),
                                             "komentar", Optional.ofNullable(menuPenjualan.getKomentar()).orElse("")))
                                             .toList(),
                                     "totalBayar", penjualan.getTotalBayar(),
@@ -451,6 +455,8 @@ public class MenuController {
                                         "idMenu", menuPenjualan.getIdMenu().getId(),
                                         "namaMenu", menuPenjualan.getIdMenu().getNama(),
                                         "jumlah", menuPenjualan.getJumlah(),
+                                        "totalHarga", menuPenjualan.getHarga() * menuPenjualan.getJumlah(),
+                                        "diskon", menuPenjualan.getDiskon(),
                                         "komentar", Optional.ofNullable(menuPenjualan.getKomentar()).orElse("")))
                                         .toList(),
                                 "totalBayar", penjualan.getTotalBayar(),
@@ -546,7 +552,7 @@ public class MenuController {
                 Session session = sessionOpt.get();
                 if (session.getIdLogin().getLevel() == Level.TOKO) {
                     Toko toko = session.getIdLogin().getIdToko();
-                    Optional<Penjualan> penjualanOpt = menuService.findCurrentCart(toko);
+                    Optional<Penjualan> penjualanOpt = menuService.findCurrentCartNotPurchased(toko);
                     if (penjualanOpt.isPresent()) {
                         Penjualan penjualan = penjualanOpt.get();
                         data = Map.of("idPenjualan", penjualan.getId(),
@@ -606,6 +612,63 @@ public class MenuController {
                     Menu menu = menuService.addMenu(toko, menuDTO);
                     data = Map.of(
                             "idMenu", menu.getId());
+                } else {
+                    httpCode = HTTPCode.FORBIDDEN;
+                    data = new ErrorMessage(httpCode, "Akses Ditolak");
+                }
+            } else {
+                httpCode = HTTPCode.BAD_REQUEST;
+                data = new ErrorMessage(httpCode, "Pemeriksaan Autentikasi Gagal");
+            }
+        } catch (IllegalArgumentException e) {
+            httpCode = HTTPCode.BAD_REQUEST;
+            data = new ErrorMessage(httpCode, e.getMessage());
+        } catch (Exception e) {
+            httpCode = HTTPCode.INTERNAL_SERVER_ERROR;
+            data = new ErrorMessage(httpCode, e.getMessage());
+        }
+
+        return ResponseEntity
+                .status(httpCode.getStatus())
+                .contentType(MediaType.APPLICATION_JSON)
+                .body(data);
+    }
+
+    @PostMapping("/cart/backToCart")
+    public ResponseEntity<Object> backToCart(HttpServletRequest request) {
+        String sessionToken = request.getHeader("Token");
+        HTTPCode httpCode = HTTPCode.OK;
+        try {
+            Optional<Session> sessionOpt = loginService.findSessionBySessionToken(sessionToken);
+            if (sessionOpt.isPresent()) {
+                Session session = sessionOpt.get();
+                if (session.getIdLogin().getLevel() == Level.TOKO) {
+                    Toko toko = session.getIdLogin().getIdToko();
+                    Optional<Penjualan> penjualanOpt = menuService.findCurrentCartPayment(toko);
+                    if (penjualanOpt.isPresent()) {
+                        Penjualan penjualan = penjualanOpt.get();
+                        penjualan = menuService.cartBackToCart(penjualan);
+                        data = Map.of("idPenjualan", penjualan.getId(),
+                                "statusPenjualan", penjualan.getStatusPenjualan().toString(),
+                                "listMenu", penjualan.getListMenuPenjualan().stream().map(menuPenjualan -> Map.of(
+                                        "idItem", menuPenjualan.getId(),
+                                        "idMenu", menuPenjualan.getIdMenu().getId(),
+                                        "namaMenu", menuPenjualan.getIdMenu().getNama(),
+                                        "jumlah", menuPenjualan.getJumlah(),
+                                        "komentar", Optional.ofNullable(menuPenjualan.getKomentar()).orElse("")))
+                                        .toList(),
+                                "totalBayar", penjualan.getTotalBayar(),
+                                "totalHarga", penjualan.getTotalHarga(),
+                                "diskon", penjualan.getDiskon(),
+                                "tipePembayaran",
+                                Optional.ofNullable(penjualan.getTipePembayaran()).map(TipePembayaran::toString)
+                                        .orElse(""),
+                                "createdAt", penjualan.getCreatedAt(),
+                                "editedAt", penjualan.getEditedAt());
+                    } else {
+                        httpCode = HTTPCode.NOT_FOUND;
+                        data = new ErrorMessage(httpCode, "Item Cart tidak ditemukan");
+                    }
                 } else {
                     httpCode = HTTPCode.FORBIDDEN;
                     data = new ErrorMessage(httpCode, "Akses Ditolak");
@@ -699,27 +762,36 @@ public class MenuController {
                     Optional<Penjualan> penjualanOpt = menuService.findCurrentCartPayment(toko);
                     if (penjualanOpt.isPresent()) {
                         Penjualan penjualan = penjualanOpt.get();
-                        if(penjualan.getTotalHarga() > paymentDTO.getTotalBayar()) {
+                        if (penjualan.getTotalHarga() > paymentDTO.getTotalBayar()) {
                             throw new IllegalArgumentException("Total Bayar tidak mencukupi jumlah yang harus dibayar");
                         }
                         penjualan = menuService.completePayment(penjualan, paymentDTO);
-                        data = Map.of("idPenjualan", penjualan.getId(),
-                                "statusPenjualan", penjualan.getStatusPenjualan().toString(),
-                                "listMenu", penjualan.getListMenuPenjualan().stream().map(menuPenjualan -> Map.of(
-                                        "idItem", menuPenjualan.getId(),
-                                        "idMenu", menuPenjualan.getIdMenu().getId(),
-                                        "namaMenu", menuPenjualan.getIdMenu().getNama(),
-                                        "jumlah", menuPenjualan.getJumlah(),
-                                        "komentar", Optional.ofNullable(menuPenjualan.getKomentar()).orElse("")))
-                                        .toList(),
-                                "totalBayar", penjualan.getTotalBayar(),
-                                "totalHarga", penjualan.getTotalHarga(),
-                                "diskon", penjualan.getDiskon(),
-                                "tipePembayaran",
-                                Optional.ofNullable(penjualan.getTipePembayaran()).map(TipePembayaran::toString)
-                                        .orElse(""),
-                                "createdAt", penjualan.getCreatedAt(),
-                                "editedAt", penjualan.getEditedAt());
+                        data = Map.ofEntries(
+                                Map.entry("idPenjualan", penjualan.getId()),
+                                Map.entry("statusPenjualan", penjualan.getStatusPenjualan().toString()),
+                                Map.entry("listMenu", penjualan
+                                        .getListMenuPenjualan().stream().map(menuPenjualan -> Map.of(
+                                                "idItem", menuPenjualan.getId(),
+                                                "idMenu", menuPenjualan.getIdMenu().getId(),
+                                                "namaMenu", menuPenjualan.getIdMenu().getNama(),
+                                                "jumlah", menuPenjualan.getJumlah(),
+                                                "totalHarga",
+                                                (menuPenjualan.getHarga() * menuPenjualan.getJumlah())
+                                                        - ((menuPenjualan.getDiskon() / 100 * menuPenjualan.getHarga())
+                                                                * menuPenjualan.getJumlah()),
+                                                "komentar",
+                                                Optional.ofNullable(menuPenjualan.getKomentar()).orElse("")))
+                                        .toList()),
+                                Map.entry("totalBayar", penjualan.getTotalBayar()),
+                                Map.entry("totalHarga", penjualan.getTotalHarga()),
+                                Map.entry("diskon", penjualan.getDiskon()),
+                                Map.entry("namaPelanggan", penjualan.getNamaPelanggan()),
+                                Map.entry("kembalian", penjualan.getTotalBayar() - penjualan.getTotalHarga()),
+                                Map.entry("tipePembayaran",
+                                        Optional.ofNullable(penjualan.getTipePembayaran()).map(TipePembayaran::toString)
+                                                .orElse("")),
+                                Map.entry("createdAt", penjualan.getCreatedAt()),
+                                Map.entry("editedAt", penjualan.getEditedAt()));
                     } else {
                         httpCode = HTTPCode.NOT_FOUND;
                         data = new ErrorMessage(httpCode, "Item Cart tidak ditemukan");
