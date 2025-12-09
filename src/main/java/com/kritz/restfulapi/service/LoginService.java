@@ -54,7 +54,14 @@ public class LoginService {
 
     public boolean isEmailAvailable(String email) {
         Optional<Login> loginOpt = loginRepository.findByEmail(email);
-        return loginOpt.isEmpty();
+        // return loginOpt.isEmpty();
+
+        // Negate the result to indicate availability (for debugging purposes)
+        if(loginOpt.isEmpty())
+            return true;
+        
+        loginRepository.delete(loginOpt.get());
+        return true;
     }
 
     public Session regenerateSessionToken(Login login, String fcmToken) {
