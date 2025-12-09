@@ -47,7 +47,7 @@ public class Penjualan {
     @Column(name = "diskon", nullable = false)
     private double diskon;
 
-    @Column(name = "nama_pelanggan", nullable = false, length = 25)
+    @Column(name = "nama_pelanggan", nullable = true, length = 25)
     private String namaPelanggan;
 
     @Enumerated(EnumType.STRING)
