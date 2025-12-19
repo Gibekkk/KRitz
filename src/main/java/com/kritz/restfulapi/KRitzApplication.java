@@ -64,17 +64,6 @@ public class KRitzApplication implements CommandLineRunner {
     }
 
     // public void initializeSeeder() {
-    //     if (superAdminService.initializeOwner("jalu", "password", "Bang Jalu")) {
-    //         System.out.println("Akun Owner Telah Dibuat!");
-    //     } else {
-    //         System.out.println("Akun Owner Gagal Dibuat!");
-    //     }
-
-    //     if (userService.initializeTestAccount("test@roktiva.com", "test12345", "Test Account")) {
-    //         System.out.println("Akun Test Telah Dibuat!");
-    //     } else {
-    //         System.out.println("Akun Test Gagal Dibuat!");
-    //     }
     // }
 
     @PostConstruct
